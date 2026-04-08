@@ -1,0 +1,54 @@
+{
+  "name": "@thatjoshguy/oneui-icons",
+  "version": "1.0.0",
+  "description": "A comprehensive collection of One UI style icons as React + TypeScript components",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "generate": "node scripts/generate.js",
+    "build": "tsup",
+    "prepublishOnly": "npm run generate && npm run build",
+    "clean": "rm -rf dist src/icons"
+  },
+  "keywords": [
+    "oneui",
+    "one-ui",
+    "icons",
+    "react",
+    "typescript",
+    "svg",
+    "components",
+    "samsung"
+  ],
+  "author": "Josh Skinner <thatjoshguy>",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "react": "^18.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thatjoshguy/oneui-icons.git"
+  },
+  "homepage": "https://github.com/thatjoshguy/oneui-icons#readme",
+  "bugs": {
+    "url": "https://github.com/thatjoshguy/oneui-icons/issues"
+  }
+}

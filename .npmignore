@@ -1,0 +1,19 @@
+# Source files
+src/
+scripts/
+SVG/
+
+# Config files
+tsconfig.json
+.gitignore
+
+# Development
+*.log
+.DS_Store
+
+# Only ship dist/
+*
+!dist/
+!package.json
+!README.md
+!LICENSE
