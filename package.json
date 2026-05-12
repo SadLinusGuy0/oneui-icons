@@ -1,6 +1,6 @@
 {
   "name": "@thatjoshguy/oneui-icons",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A comprehensive collection of One UI style icons as React + TypeScript components",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

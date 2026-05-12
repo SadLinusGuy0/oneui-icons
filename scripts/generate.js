@@ -38,13 +38,39 @@ function svgToJsx(svgContent) {
   return svgContent
     // Convert hyphenated attributes to camelCase
     .replace(/fill-rule/g, 'fillRule')
+    .replace(/fill-opacity/g, 'fillOpacity')
     .replace(/clip-rule/g, 'clipRule')
+    .replace(/clip-path/g, 'clipPath')
     .replace(/stroke-width/g, 'strokeWidth')
     .replace(/stroke-linecap/g, 'strokeLinecap')
     .replace(/stroke-linejoin/g, 'strokeLinejoin')
     .replace(/stroke-miterlimit/g, 'strokeMiterlimit')
     .replace(/stroke-dasharray/g, 'strokeDasharray')
     .replace(/stroke-dashoffset/g, 'strokeDashoffset')
+    .replace(/stroke-opacity/g, 'strokeOpacity')
+    .replace(/stop-color/g, 'stopColor')
+    .replace(/stop-opacity/g, 'stopOpacity')
+    .replace(/flood-color/g, 'floodColor')
+    .replace(/flood-opacity/g, 'floodOpacity')
+    .replace(/color-interpolation-filters/g, 'colorInterpolationFilters')
+    .replace(/color-interpolation/g, 'colorInterpolation')
+    .replace(/font-family/g, 'fontFamily')
+    .replace(/font-size/g, 'fontSize')
+    .replace(/font-weight/g, 'fontWeight')
+    .replace(/letter-spacing/g, 'letterSpacing')
+    .replace(/text-anchor/g, 'textAnchor')
+    .replace(/text-decoration/g, 'textDecoration')
+    .replace(/dominant-baseline/g, 'dominantBaseline')
+    .replace(/alignment-baseline/g, 'alignmentBaseline')
+    .replace(/baseline-shift/g, 'baselineShift')
+    .replace(/shape-rendering/g, 'shapeRendering')
+    .replace(/image-rendering/g, 'imageRendering')
+    .replace(/pointer-events/g, 'pointerEvents')
+    .replace(/paint-order/g, 'paintOrder')
+    .replace(/vector-effect/g, 'vectorEffect')
+    // Convert xlink:href to xlinkHref (deprecated but still in some SVGs)
+    .replace(/xlink:href/g, 'xlinkHref')
+    .replace(/xml:space/g, 'xmlSpace')
     // Convert style attribute to React style object
     .replace(/style="mask-type:alpha"/g, 'style={{maskType:"alpha"}}')
     .replace(/style="mask-type:luminance"/g, 'style={{maskType:"luminance"}}')
@@ -53,6 +79,14 @@ function svgToJsx(svgContent) {
     .replace(/stroke="white"/g, 'stroke={color}')
     .replace(/fill="black"/g, 'fill={color}')
     .replace(/stroke="black"/g, 'stroke={color}')
+    .replace(/fill="#fff"/gi, 'fill={color}')
+    .replace(/stroke="#fff"/gi, 'stroke={color}')
+    .replace(/fill="#ffffff"/gi, 'fill={color}')
+    .replace(/stroke="#ffffff"/gi, 'stroke={color}')
+    .replace(/fill="#000"/gi, 'fill={color}')
+    .replace(/stroke="#000"/gi, 'stroke={color}')
+    .replace(/fill="#000000"/gi, 'fill={color}')
+    .replace(/stroke="#000000"/gi, 'stroke={color}')
     // Handle fill and stroke without quotes (some SVGs might have this)
     .replace(/fill=white/g, 'fill={color}')
     .replace(/stroke=white/g, 'stroke={color}');
@@ -60,7 +94,6 @@ function svgToJsx(svgContent) {
 
 // Extract the SVG content (everything inside <svg>...</svg>)
 function extractSvgBody(svgContent) {
-  // Remove the opening <svg...> tag and closing </svg> tag
   const match = svgContent.match(/<svg[^>]*>([\s\S]*)<\/svg>/);
   if (!match) {
     throw new Error('Invalid SVG content');
@@ -68,10 +101,23 @@ function extractSvgBody(svgContent) {
   return match[1].trim();
 }
 
+// Extract viewBox from the SVG tag, falling back to width/height
+function extractViewBox(svgContent) {
+  const vbMatch = svgContent.match(/viewBox="([^"]*)"/);
+  if (vbMatch) return vbMatch[1];
+
+  const wMatch = svgContent.match(/width="([^"]*)"/);
+  const hMatch = svgContent.match(/height="([^"]*)"/);
+  if (wMatch && hMatch) return `0 0 ${wMatch[1]} ${hMatch[1]}`;
+
+  return '0 0 24 24';
+}
+
 // Generate React component from SVG
 function generateComponent(svgContent, componentName) {
   const svgBody = extractSvgBody(svgContent);
   const jsxBody = svgToJsx(svgBody);
+  const viewBox = extractViewBox(svgContent);
   
   return `import React from 'react';
 import type { IconProps } from '../types';
@@ -85,7 +131,7 @@ export const ${componentName}: React.FC<IconProps> = ({
   <svg
     width={size}
     height={size}
-    viewBox="0 0 24 24"
+    viewBox="${viewBox}"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
@@ -112,17 +158,16 @@ function generateComponents() {
   const svgFiles = fs.readdirSync(SVG_DIR).filter(file => file.endsWith('.svg'));
   console.log(`📁 Found ${svgFiles.length} SVG files`);
   
-  const components = [];
-  const componentNames = new Map(); // Track component names to handle duplicates
-  let successCount = 0;
+  const componentNames = new Map();
+  let newCount = 0;
+  let replacedCount = 0;
   let errorCount = 0;
   
-  // Process each SVG file
+  // Process each SVG file — overwrites existing components (newer version wins)
   svgFiles.forEach((filename, index) => {
     try {
       let componentName = toPascalCase(filename);
       
-      // Handle duplicate component names
       if (componentNames.has(componentName)) {
         const count = componentNames.get(componentName);
         componentNames.set(componentName, count + 1);
@@ -134,19 +179,18 @@ function generateComponents() {
       const svgPath = path.join(SVG_DIR, filename);
       const outputPath = path.join(OUTPUT_DIR, `${componentName}.tsx`);
       
-      // Read SVG content
+      const existed = fs.existsSync(outputPath);
+      
       const svgContent = fs.readFileSync(svgPath, 'utf8');
-      
-      // Generate React component
       const componentCode = generateComponent(svgContent, componentName);
-      
-      // Write component file
       fs.writeFileSync(outputPath, componentCode);
       
-      components.push(componentName);
-      successCount++;
+      if (existed) {
+        replacedCount++;
+      } else {
+        newCount++;
+      }
       
-      // Log progress every 100 files
       if ((index + 1) % 100 === 0) {
         console.log(`  ✓ Processed ${index + 1}/${svgFiles.length} files...`);
       }
@@ -156,15 +200,19 @@ function generateComponents() {
     }
   });
   
-  console.log(`\n✅ Successfully generated ${successCount} components`);
+  console.log(`\n✅ Generated from SVGs: ${newCount} new, ${replacedCount} replaced`);
   if (errorCount > 0) {
     console.log(`⚠️  Failed to generate ${errorCount} components`);
   }
   
-  // Generate index.ts with all exports
-  console.log('\n📝 Generating index.ts...');
-  const exports = components
-    .sort()
+  // Build index from ALL component files in src/icons/ (existing + newly generated)
+  console.log('\n📝 Generating index.ts from all components...');
+  const allComponentFiles = fs.readdirSync(OUTPUT_DIR)
+    .filter(file => file.endsWith('.tsx'))
+    .map(file => file.replace('.tsx', ''))
+    .sort();
+  
+  const exports = allComponentFiles
     .map(name => `export { ${name} } from './icons/${name}';`)
     .join('\n');
   
@@ -178,7 +226,9 @@ ${exports}
   console.log('✅ Index file generated');
   
   console.log('\n🎉 Icon generation complete!');
-  console.log(`   Total components: ${components.length}`);
+  console.log(`   New icons added: ${newCount}`);
+  console.log(`   Existing icons replaced: ${replacedCount}`);
+  console.log(`   Total components: ${allComponentFiles.length}`);
 }
 
 // Run the generator
